@@ -34,6 +34,7 @@ export default function HomePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isMobile, setIsMobile] = useState(false);
     const [toast, setToast] = useState<{
         message: string;
         type: 'success' | 'error' | 'warning' | 'info';
@@ -137,10 +138,18 @@ export default function HomePage() {
     };
 
     // Fetch messages on mount
-
-    // Fetch messages on mount
     useEffect(() => {
         fetchMessages();
+
+        // Detect mobile viewport
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 1024);
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        return () => window.removeEventListener('resize', checkMobile);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -151,7 +160,7 @@ export default function HomePage() {
     );
 
     return (
-        <div className="bg-background-dark text-white font-display overflow-hidden relative selection:bg-primary selection:text-white h-screen w-full flex flex-col">
+        <div className="min-h-screen bg-background-dark text-white font-display relative selection:bg-primary selection:text-white w-full flex flex-col overflow-y-auto pb-20">
             {/* Navbar */}
             <header className="fixed top-0 left-0 right-0 z-50 glass-panel border-b border-border-dark h-16 transition-all duration-300">
                 <div className="w-full h-full max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between">
@@ -207,8 +216,8 @@ export default function HomePage() {
                 </div>
             </header>
             {/* Main Content Area - 3 Column Layout (Flow) */}
-            <main className="relative flex-1 w-full h-full overflow-hidden pt-16 bg-background-dark">
-                <div className="h-full w-full max-w-[1800px] mx-auto flex gap-4 px-4 overflow-y-auto no-scrollbar scroll-smooth">
+            <main className="relative flex-1 w-full pt-16 bg-background-dark">
+                <div className="w-full max-w-[1800px] mx-auto flex gap-4 px-4 pb-8">
 
                     {/* LEFT COLUMN: Sticky Notes */}
                     <div className="hidden lg:flex flex-1 flex-col gap-4 py-8">
@@ -221,10 +230,10 @@ export default function HomePage() {
 
                     {/* CENTER COLUMN: Notes + Form (Sticky) */}
                     <div className="flex-1 lg:flex-none lg:w-[600px] flex flex-col gap-8 py-8">
-                        {/* Mobile/Tablet: Show some notes before form */}
+                        {/* Mobile/Tablet: Show first few notes before form */}
                         <div className="flex flex-col gap-4 lg:hidden">
                             {isLoading ? <SkeletonCard /> :
-                                filteredMessages.slice(0, 2).map((message, i) => (
+                                filteredMessages.slice(0, 3).map((message, i) => (
                                     <div key={message.id}><StickyNote message={message} index={i} /></div>
                                 ))
                             }
@@ -242,11 +251,13 @@ export default function HomePage() {
                         {/* Rest of the notes for Center Column */}
                         <div className="flex flex-col gap-4">
                             {isLoading ? [...Array(4)].map((_, i) => <SkeletonCard key={i} />) :
-                                // On mobile show rest, on desktop show 1/3
                                 filteredMessages.filter((_, i) => {
-                                    // Mobile logic different than desktop
-                                    // For desktop (3 cols): index % 3 === 1
-                                    return i % 3 === 1;
+                                    // On mobile: show all remaining messages (skip first 3)
+                                    // On desktop (3 cols): show only middle column (index % 3 === 1)
+                                    if (isMobile) {
+                                        return i >= 3; // Mobile: show all except first 3
+                                    }
+                                    return i % 3 === 1; // Desktop: middle column only
                                 }).map((message, i) => (
                                     <div key={message.id}><StickyNote message={message} index={i} /></div>
                                 ))
