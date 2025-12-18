@@ -16,9 +16,19 @@ import { Logger } from '@/lib/utils/logger';
 
 /**
  * Validate environment variables
- * DEBUG VERSION - More tolerant for troubleshooting
+ * Only runs at runtime, not during build
  */
 function validateAuthConfig() {
+    // Skip validation during build time
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+        return {
+            username: process.env.ADMIN_USERNAME || 'admin',
+            password: process.env.ADMIN_PASSWORD || 'temporary',
+            secret: process.env.NEXTAUTH_SECRET || 'temporary-secret-for-build-only',
+            adminEmails: (process.env.ADMIN_EMAILS || 'admin@example.com').split(',').map(email => email.trim()),
+        };
+    }
+
     Logger.debug('Validating auth config...');
 
     const username = process.env.ADMIN_USERNAME;

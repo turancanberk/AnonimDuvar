@@ -16,11 +16,21 @@ import { Logger } from '@/lib/utils/logger';
 
 /**
  * Validate and get Firebase Admin credentials from environment variables
+ * Only validates at runtime, not during build
  */
 function getFirebaseCredentials() {
     const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+
+    // Skip validation during build time
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+        return {
+            projectId: projectId || 'build-time-placeholder',
+            clientEmail: clientEmail || 'build@placeholder.com',
+            privateKey: privateKey || 'build-time-placeholder-key',
+        };
+    }
 
     // Validate all required credentials are present
     if (!projectId || !clientEmail || !privateKey) {
