@@ -141,6 +141,7 @@ export default function HomePage() {
     // Fetch messages on mount
     useEffect(() => {
         fetchMessages();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Filter messages based on search query

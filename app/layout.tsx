@@ -41,13 +41,6 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="tr" className={`${inter.variable} ${caveat.variable} dark`} suppressHydrationWarning>
-            <head>
-                {/* Material Symbols for icons */}
-                <link
-                    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-                    rel="stylesheet"
-                />
-            </head>
             <body className="font-display antialiased bg-background-dark text-white transition-colors duration-300" suppressHydrationWarning>
                 <ThemeProvider>
                     <SessionProvider>{children}</SessionProvider>
