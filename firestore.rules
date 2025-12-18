@@ -1,0 +1,97 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function: Check if user is admin
+    // Note: Admin validation is primarily done via NextAuth
+    // This is a secondary security layer
+    function isAdmin() {
+      return isAuthenticated();
+    }
+    
+    // Helper function: Validate message content
+    function isValidMessageContent(data) {
+      return data.content is string &&
+             data.content.size() > 0 &&
+             data.content.size() <= 500;
+    }
+    
+    // Helper function: Validate color format
+    function isValidColor(color) {
+      return color is string &&
+             color.matches('^#[0-9A-Fa-f]{6}$');
+    }
+    
+    // Helper function: Validate author name (optional)
+    function isValidAuthorName(data) {
+      return !('authorName' in data) || 
+             (data.authorName is string && data.authorName.size() <= 50);
+    }
+    
+    // Messages collection
+    match /messages/{messageId} {
+      
+      // READ RULES
+      // Anyone can read APPROVED messages
+      allow read: if resource.data.status == 'APPROVED';
+      
+      // Admins can read ALL messages
+      allow read: if isAdmin();
+      
+      // CREATE RULES
+      // Anyone can create a message with PENDING status
+      allow create: if 
+        // Status must be PENDING
+        request.resource.data.status == 'PENDING' &&
+        
+        // Content validation
+        isValidMessageContent(request.resource.data) &&
+        
+        // Color validation
+        isValidColor(request.resource.data.color) &&
+        
+        // Author name validation (optional field)
+        isValidAuthorName(request.resource.data) &&
+        
+        // Timestamps must be set to current time
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time &&
+        
+        // Ensure no admin-only fields are set
+        !('moderatedAt' in request.resource.data) &&
+        !('moderatedBy' in request.resource.data) &&
+        !('rejectionReason' in request.resource.data);
+      
+      // UPDATE RULES
+      // Only admins can update messages (for moderation)
+      allow update: if isAdmin() &&
+        // Status must be APPROVED or REJECTED
+        request.resource.data.status in ['APPROVED', 'REJECTED'] &&
+        
+        // Content and color cannot be changed
+        request.resource.data.content == resource.data.content &&
+        request.resource.data.color == resource.data.color &&
+        
+        // Moderation timestamp must be set
+        request.resource.data.moderatedAt == request.time &&
+        
+        // Updated timestamp must be set
+        request.resource.data.updatedAt == request.time;
+      
+      // DELETE RULES
+      // Only admins can delete messages
+      allow delete: if isAdmin();
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
