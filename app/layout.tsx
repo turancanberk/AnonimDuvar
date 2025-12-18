@@ -23,6 +23,10 @@ export const metadata: Metadata = {
     description: 'İnsanların söyleyemedikleri şeyleri anonim olarak paylaşabilecekleri güvenli platform. İçini dök, rahatla, özgürleş. Kimse bilmeden paylaş.',
     keywords: ['anonim duvar', 'itiraf', 'anonim mesaj', 'sır', 'paylaşım', 'duygular', 'itiraf duvarı', 'anonim platform'],
     authors: [{ name: 'Anonim Duvar' }],
+    icons: {
+        icon: '/images/logo-notopya.png',
+        apple: '/images/logo-notopya.png',
+    },
     openGraph: {
         title: 'Anonim Duvar | Anonim İtiraf Platformu',
         description: 'Sırrın bizimle güvende. Kimse bilmeden anlat, rahatla. %100 anonim ve güvenli.',

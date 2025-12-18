@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Message, MessageStatus } from '@/lib/domain/entities/Message';
@@ -43,8 +43,17 @@ export default function AdminPage() {
         }
     }, [status, router]);
 
+    // Toast functions
+    const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+        setToast({ message, type, isVisible: true });
+    }, []);
+
+    const closeToast = useCallback(() => {
+        setToast((prev) => ({ ...prev, isVisible: false }));
+    }, []);
+
     // Fetch messages and stats
-    const fetchData = async (showLoading = true) => {
+    const fetchData = useCallback(async (showLoading = true) => {
         try {
             if (showLoading) setIsLoading(true);
 
@@ -83,7 +92,7 @@ export default function AdminPage() {
         } finally {
             if (showLoading) setIsLoading(false);
         }
-    };
+    }, [filter, showToast]); // Added filter and showToast as dependencies
 
     useEffect(() => {
         if (status === 'authenticated') {
@@ -100,15 +109,8 @@ export default function AdminPage() {
                 clearInterval(pollingInterval.current);
             }
         };
-    }, [status, filter]);
+    }, [status, filter, fetchData]);
 
-    const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
-        setToast({ message, type, isVisible: true });
-    };
-
-    const closeToast = () => {
-        setToast((prev) => ({ ...prev, isVisible: false }));
-    };
 
     // Phase 12.4: Optimistic Updates
     const handleApprove = async (id: string) => {
@@ -363,8 +365,8 @@ export default function AdminPage() {
                             key={status}
                             onClick={() => setFilter(status)}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === status
-                                    ? 'bg-primary-500 text-white'
-                                    : 'text-gray-400 hover:bg-[#282e39] hover:text-white'
+                                ? 'bg-primary-500 text-white'
+                                : 'text-gray-400 hover:bg-[#282e39] hover:text-white'
                                 }`}
                         >
                             {status === 'ALL' && '📋 Tümü'}
