@@ -7,11 +7,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/infrastructure/auth/nextAuthOptions';
-import { getFirestore } from 'firebase-admin/firestore';
-import { adminApp } from '@/lib/infrastructure/firebase/adminApp';
+import { adminDb } from '@/lib/infrastructure/firebase/adminApp';
 import { Logger } from '@/lib/utils/logger';
-
-const db = getFirestore(adminApp);
 
 /**
  * GET /api/admin/reports
@@ -34,7 +31,7 @@ export async function GET(request: Request) {
 
         // Fetch all messages and filter client-side
         // This avoids Firestore index issues with array queries
-        const messagesSnapshot = await db
+        const messagesSnapshot = await adminDb
             .collection('messages')
             .orderBy('createdAt', 'desc')
             .get();

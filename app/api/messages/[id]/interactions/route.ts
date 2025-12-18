@@ -9,12 +9,9 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getFirestore } from 'firebase-admin/firestore';
-import { adminApp } from '@/lib/infrastructure/firebase/adminApp';
+import { adminDb } from '@/lib/infrastructure/firebase/adminApp';
 import { checkInteractionRateLimit } from '@/lib/utils/rateLimit';
 import { getClientIp, generateClientFingerprint } from '@/lib/utils/clientIdentification';
-
-const db = getFirestore(adminApp);
 
 /**
  * POST /api/messages/[id]/interactions
@@ -69,7 +66,7 @@ export async function POST(
         }
 
         // Get message
-        const messageRef = db.collection('messages').doc(id);
+        const messageRef = adminDb.collection('messages').doc(id);
         const messageDoc = await messageRef.get();
 
         if (!messageDoc.exists) {
