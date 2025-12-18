@@ -51,13 +51,26 @@ function getFirebaseCredentials() {
         throw new Error('Missing Firebase Admin credentials.');
     }
 
-    // --- SIMPLE & SAFE SANITIZATION ---
-    // 1. Remove surrounding quotes
-    let formattedKey = privateKey.replace(/^['"]|['"]$/g, '');
+    // --- ROBUST PRIVATE KEY SANITIZATION ---
+    let formattedKey = privateKey;
 
-    // 2. Unescape escaped newlines (\\n -> \n)
-    if (formattedKey.includes('\\n')) {
+    // 1. Remove surrounding quotes (single or double)
+    formattedKey = formattedKey.replace(/^['"]|['"]$/g, '');
+
+    // 2. Handle different newline formats
+    // Check if key contains literal \n characters (as string, not newline)
+    if (formattedKey.includes('\\n') && !formattedKey.includes('\n')) {
+        // Case: "-----BEGIN PRIVATE KEY-----\nMIIE..." (escaped newlines)
         formattedKey = formattedKey.replace(/\\n/g, '\n');
+    } else if (formattedKey.includes('\\\\n')) {
+        // Case: "-----BEGIN PRIVATE KEY-----\\nMIIE..." (double-escaped)
+        formattedKey = formattedKey.replace(/\\\\n/g, '\n');
+    }
+    // If already contains real newlines, no transformation needed
+
+    // 3. Validate key format
+    if (!formattedKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        throw new Error('Invalid private key format: Missing BEGIN marker');
     }
 
     return {
