@@ -24,8 +24,8 @@ export const metadata: Metadata = {
     keywords: ['anonim duvar', 'itiraf', 'anonim mesaj', 'sır', 'paylaşım', 'duygular', 'itiraf duvarı', 'anonim platform'],
     authors: [{ name: 'Anonim Duvar' }],
     icons: {
-        icon: '/images/logo-notopya.png',
-        apple: '/images/logo-notopya.png',
+        icon: '/images/logo.png',
+        apple: '/images/logo.png',
     },
     openGraph: {
         title: 'Anonim Duvar | Anonim İtiraf Platformu',
