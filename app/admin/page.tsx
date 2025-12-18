@@ -10,6 +10,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Message, MessageStatus } from '@/lib/domain/entities/Message';
+import { ViolationReport, VIOLATION_REPORT_TYPE_LABELS } from '@/lib/domain/entities/ViolationReport';
 import { AdminMessageList } from '@/components/features/admin/AdminMessageList';
 import Link from 'next/link';
 import { Toast } from '@/components/ui/Toast';
@@ -20,9 +21,10 @@ export default function AdminPage() {
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [reportedMessages, setReportedMessages] = useState<Message[]>([]);
+    const [violationReports, setViolationReports] = useState<ViolationReport[]>([]);
     const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
     const [isLoading, setIsLoading] = useState(true);
-    const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'REPORTS'>('PENDING');
+    const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'REPORTS' | 'VIOLATION_REPORTS'>('PENDING');
     const [toast, setToast] = useState<{
         message: string;
         type: 'success' | 'error' | 'warning' | 'info';
@@ -64,6 +66,14 @@ export default function AdminPage() {
 
                 if (reportsData.success) {
                     setReportedMessages(reportsData.data);
+                }
+            } else if (filter === 'VIOLATION_REPORTS') {
+                // Fetch violation reports
+                const violationRes = await fetch('/api/admin/violation-reports');
+                const violationData = await violationRes.json();
+
+                if (violationData.success) {
+                    setViolationReports(violationData.data);
                 }
             } else {
                 // Fetch messages
@@ -261,6 +271,50 @@ export default function AdminPage() {
         }
     };
 
+    const handleUpdateViolationReport = async (id: string, status: string) => {
+        try {
+            const res = await fetch(`/api/admin/violation-reports/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status }),
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                showToast('Bildirim güncellendi', 'success');
+                fetchData(false);
+            } else {
+                throw new Error(data.error?.message || 'Güncelleme başarısız');
+            }
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Bir hata oluştu', 'error');
+        }
+    };
+
+    const handleDeleteViolationReport = async (id: string) => {
+        if (!confirm('Bu bildirimi silmek istediğinizden emin misiniz?')) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/admin/violation-reports/${id}`, {
+                method: 'DELETE',
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                showToast('Bildirim silindi', 'success');
+                fetchData(false);
+            } else {
+                throw new Error(data.error?.message || 'Silme başarısız');
+            }
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Bir hata oluştu', 'error');
+        }
+    };
+
     if (status === 'loading' || status === 'unauthenticated') {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -360,7 +414,7 @@ export default function AdminPage() {
 
                 {/* Filter Tabs */}
                 <div className="bg-[#1b1f27]/80 backdrop-blur-sm border border-[#3b4354] rounded-lg shadow-sm p-2 mb-6 flex gap-2">
-                    {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'REPORTS'] as const).map((status) => (
+                    {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'REPORTS', 'VIOLATION_REPORTS'] as const).map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilter(status)}
@@ -374,6 +428,7 @@ export default function AdminPage() {
                             {status === 'APPROVED' && '✅ Onaylanan'}
                             {status === 'REJECTED' && '❌ Reddedilen'}
                             {status === 'REPORTS' && '🚩 Şikayetler'}
+                            {status === 'VIOLATION_REPORTS' && '📝 İhlal Bildirimleri'}
                         </button>
                     ))}
                 </div>
@@ -449,6 +504,64 @@ export default function AdminPage() {
                                                     <p className="text-xs text-gray-500">IP: {report.reportedBy}</p>
                                                 </div>
                                             ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                ) : filter === 'VIOLATION_REPORTS' ? (
+                    /* Violation Reports View */
+                    <div className="space-y-4">
+                        {violationReports.length === 0 ? (
+                            <div className="bg-[#1b1f27]/80 rounded-lg p-8 text-center border border-[#282e39]">
+                                <p className="text-gray-400">İhlal bildirimi bulunmuyor</p>
+                            </div>
+                        ) : (
+                            violationReports.map((report) => (
+                                <div key={report.id} className="bg-[#1b1f27]/80 border border-[#282e39] rounded-lg p-6">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <span className="px-3 py-1 bg-red-500/20 text-red-400 text-sm font-medium rounded-full">
+                                                    {VIOLATION_REPORT_TYPE_LABELS[report.type]}
+                                                </span>
+                                                <span className={`px-3 py-1 text-sm font-medium rounded-full ${report.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                        report.status === 'REVIEWED' ? 'bg-blue-500/20 text-blue-400' :
+                                                            'bg-green-500/20 text-green-400'
+                                                    }`}>
+                                                    {report.status === 'PENDING' ? 'Bekliyor' :
+                                                        report.status === 'REVIEWED' ? 'İncelendi' : 'Çözüldü'}
+                                                </span>
+                                            </div>
+                                            <p className="text-gray-300 mb-3">{report.description}</p>
+                                            {report.url && (
+                                                <p className="text-sm text-gray-500 mb-2">
+                                                    <span className="font-medium">URL:</span> {report.url}
+                                                </p>
+                                            )}
+                                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                <span>Tarih: {new Date(report.createdAt).toLocaleString('tr-TR')}</span>
+                                                {report.reviewedBy && (
+                                                    <span>İnceleyen: {report.reviewedBy}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {report.status !== 'RESOLVED' && (
+                                                <button
+                                                    onClick={() => handleUpdateViolationReport(report.id, report.status === 'PENDING' ? 'REVIEWED' : 'RESOLVED')}
+                                                    className="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                                                >
+                                                    {report.status === 'PENDING' ? 'İncele' : 'Çöz'}
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleDeleteViolationReport(report.id)}
+                                                className="px-3 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                                            >
+                                                Sil
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

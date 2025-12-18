@@ -6,10 +6,12 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ViolationReportModal } from '@/components/features/violation/ViolationReportModal';
+import { Toast } from '@/components/ui/Toast';
 
 interface RuleItem {
     title: string;
@@ -101,6 +103,29 @@ const consequencesData = [
 ];
 
 export default function KurallarPage() {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [toast, setToast] = useState<{
+        message: string;
+        type: 'success' | 'error' | 'warning' | 'info';
+        isVisible: boolean;
+    }>({
+        message: '',
+        type: 'info',
+        isVisible: false,
+    });
+
+    const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+        setToast({ message, type, isVisible: true });
+    };
+
+    const closeToast = () => {
+        setToast((prev) => ({ ...prev, isVisible: false }));
+    };
+
+    const handleReportSuccess = () => {
+        showToast('Bildiriminiz alındı. En kısa sürede incelenecektir.', 'success');
+    };
+
     return (
         <div className="min-h-screen bg-background-dark text-white">
             {/* Navbar */}
@@ -288,15 +313,15 @@ export default function KurallarPage() {
                             <p className="text-gray-400 mb-6">
                                 Kurallara aykırı bir içerik gördüysen, lütfen bize bildir.
                             </p>
-                            <a
-                                href="mailto:iletisim@notopya.com"
+                            <button
+                                onClick={() => setIsModalOpen(true)}
                                 className="inline-flex items-center gap-2 bg-primary hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                 </svg>
                                 İhlal Bildir
-                            </a>
+                            </button>
                         </div>
                     </motion.div>
                 </div>
@@ -322,6 +347,21 @@ export default function KurallarPage() {
                     </div>
                 </div>
             </footer>
+
+            {/* Violation Report Modal */}
+            <ViolationReportModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSuccess={handleReportSuccess}
+            />
+
+            {/* Toast */}
+            <Toast
+                message={toast.message}
+                type={toast.type}
+                isVisible={toast.isVisible}
+                onClose={closeToast}
+            />
         </div>
     );
 }

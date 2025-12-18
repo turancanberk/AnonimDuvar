@@ -115,6 +115,14 @@ export function checkAdminRateLimit(identifier: string) {
 }
 
 /**
+ * Rate limit for violation reports
+ * 5 reports per hour per client
+ */
+export function checkViolationReportRateLimit(identifier: string) {
+    return rateLimiter.check(identifier, 5, 60 * 60 * 1000); // 5 per hour
+}
+
+/**
  * Clear all rate limits (for testing)
  */
 export function clearRateLimits() {
