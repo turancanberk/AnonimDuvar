@@ -22,8 +22,7 @@ function validateAuthConfig() {
     // Skip validation during build time
     if (process.env.NEXT_PHASE === 'phase-production-build') {
         return {
-            username: process.env.ADMIN_USERNAME || 'admin',
-            password: process.env.ADMIN_PASSWORD || 'temporary',
+            users: [{ username: 'admin', password: 'temporary', email: 'admin@example.com' }],
             secret: process.env.NEXTAUTH_SECRET || 'temporary-secret-for-build-only',
             adminEmails: (process.env.ADMIN_EMAILS || 'admin@example.com').split(',').map(email => email.trim()),
         };
@@ -31,14 +30,12 @@ function validateAuthConfig() {
 
     Logger.debug('Validating auth config...');
 
-    const username = process.env.ADMIN_USERNAME;
-    const password = process.env.ADMIN_PASSWORD;
+    const adminUsers = process.env.ADMIN_USERS;
     const secret = process.env.NEXTAUTH_SECRET;
     const adminEmails = process.env.ADMIN_EMAILS;
 
     Logger.debug('Environment variables:', {
-        username: username ? '✅ SET' : '❌ MISSING',
-        password: password ? `✅ SET (${password.length} chars)` : '❌ MISSING',
+        adminUsers: adminUsers ? '✅ SET' : '❌ MISSING',
         secret: secret ? `✅ SET (${secret.length} chars)` : '❌ MISSING',
         adminEmails: adminEmails ? '✅ SET' : '❌ MISSING',
     });
@@ -53,23 +50,37 @@ function validateAuthConfig() {
         warnings.push(`NEXTAUTH_SECRET is short (${secret.length} chars, recommended 32+)`);
     }
 
-    // Check ADMIN_USERNAME
-    if (!username) {
-        errors.push('ADMIN_USERNAME is required');
+    // Check ADMIN_USERS
+    if (!adminUsers) {
+        errors.push('ADMIN_USERS is required (format: username:password,username2:password2)');
     }
 
-    // Check ADMIN_PASSWORD
-    if (!password) {
-        errors.push('ADMIN_PASSWORD is required');
-    } else if (password.length < 12) {
-        warnings.push(`ADMIN_PASSWORD is short (${password.length} chars, recommended 12+)`);
-    } else if (password === 'admin123' || password === 'password') {
-        warnings.push('ADMIN_PASSWORD is a common password (not recommended)');
+    // Parse admin users
+    const users: Array<{ username: string; password: string; email: string }> = [];
+    if (adminUsers) {
+        const userPairs = adminUsers.split(',').map(pair => pair.trim());
+        const emails = adminEmails ? adminEmails.split(',').map(email => email.trim()) : [];
+
+        userPairs.forEach((pair, index) => {
+            const [username, password] = pair.split(':');
+            if (!username || !password) {
+                errors.push(`Invalid user format at position ${index + 1}: "${pair}". Expected format: username:password`);
+            } else {
+                if (password.length < 12) {
+                    warnings.push(`Password for "${username}" is short (${password.length} chars, recommended 12+)`);
+                }
+                users.push({
+                    username: username.trim(),
+                    password: password.trim(),
+                    email: emails[index] || `${username}@admin.local`
+                });
+            }
+        });
     }
 
     // Check ADMIN_EMAILS
     if (!adminEmails) {
-        errors.push('ADMIN_EMAILS is required (comma-separated list of authorized admin emails)');
+        warnings.push('ADMIN_EMAILS not set, using generated emails');
     }
 
     if (warnings.length > 0) {
@@ -83,17 +94,17 @@ function validateAuthConfig() {
         throw new Error(
             'Authentication configuration errors:\n' +
             errors.map(e => `  - ${e}`).join('\n') +
-            '\n\nPlease set these environment variables in .env.local'
+            '\n\nPlease set ADMIN_USERS in .env.local\nFormat: username:password,username2:password2'
         );
     }
 
     Logger.success('Auth config validation passed!');
+    Logger.debug(`Loaded ${users.length} admin user(s)`);
 
     return {
-        username: username!,
-        password: password!,
+        users,
         secret: secret!,
-        adminEmails: adminEmails!.split(',').map(email => email.trim()),
+        adminEmails: adminEmails ? adminEmails.split(',').map(email => email.trim()) : users.map(u => u.email),
     };
 }
 
@@ -114,28 +125,24 @@ export const authOptions: NextAuthOptions = {
                     username: credentials?.username || 'MISSING',
                     passwordProvided: !!credentials?.password,
                 });
-                Logger.debug('Expected:', {
-                    username: authConfig.username,
-                    passwordLength: authConfig.password.length,
-                });
 
                 try {
-                    // Validate credentials
-                    if (
-                        credentials?.username === authConfig.username &&
-                        credentials?.password === authConfig.password
-                    ) {
-                        Logger.success('Login successful!');
+                    // Find matching user
+                    const matchedUser = authConfig.users.find(
+                        user => user.username === credentials?.username && user.password === credentials?.password
+                    );
+
+                    if (matchedUser) {
+                        Logger.success(`Login successful for user: ${matchedUser.username}!`);
                         // Return user object on success
-                        // Use the first admin email from whitelist
                         return {
-                            id: '1',
-                            name: 'Admin',
-                            email: authConfig.adminEmails[0], // Use first email from whitelist
+                            id: matchedUser.username,
+                            name: matchedUser.username,
+                            email: matchedUser.email,
                         };
                     }
 
-                    Logger.debug('Login failed - credentials do not match');
+                    Logger.debug('Login failed - credentials do not match any user');
                     // Return null if credentials are invalid
                     return null;
                 } catch (error) {
