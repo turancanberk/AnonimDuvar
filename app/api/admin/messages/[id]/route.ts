@@ -60,7 +60,7 @@ export async function PATCH(
 /**
  * DELETE /api/admin/messages/[id]
  * 
- * Delete a message permanently
+ * Soft delete a message
  */
 export async function DELETE(
     request: Request,
@@ -68,12 +68,12 @@ export async function DELETE(
 ) {
     try {
         // Require admin authentication
-        await requireAdmin();
+        const session = await requireAdmin();
 
         const { id } = await params;
 
         const messageService = getMessageService();
-        await messageService.deleteMessage(id);
+        await messageService.deleteMessage(id, session.user?.email || 'unknown');
 
         return NextResponse.json({
             success: true,

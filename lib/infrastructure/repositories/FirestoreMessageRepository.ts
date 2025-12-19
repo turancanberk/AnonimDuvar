@@ -52,6 +52,9 @@ export class FirestoreMessageRepository implements IMessageRepository {
             likedBy: data.likedBy || [],
             dislikedBy: data.dislikedBy || [],
             reports: data.reports || [],
+            // Soft delete fields
+            deletedAt: data.deletedAt?.toDate ? data.deletedAt.toDate() : (data.deletedAt ? new Date(data.deletedAt) : undefined),
+            deletedBy: data.deletedBy,
         };
     }
 
@@ -339,6 +342,76 @@ export class FirestoreMessageRepository implements IMessageRepository {
         } catch (error) {
             console.error('Error searching messages:', error);
             return [];
+        }
+    }
+
+    /**
+     * Soft delete a message (mark as deleted without removing from database)
+     */
+    async softDelete(id: string, deletedBy: string): Promise<Message> {
+        try {
+            const docRef = this.db.collection(MESSAGES_COLLECTION).doc(id);
+
+            await docRef.update({
+                deletedAt: Timestamp.now(),
+                deletedBy: deletedBy,
+                updatedAt: Timestamp.now(),
+            });
+
+            const updatedDoc = await docRef.get();
+            if (!updatedDoc.exists) {
+                throw new Error('Message not found after soft delete');
+            }
+
+            return this.docToMessage(updatedDoc as QueryDocumentSnapshot);
+        } catch (error) {
+            console.error('Error soft deleting message:', error);
+            throw new Error('Failed to soft delete message');
+        }
+    }
+
+    /**
+     * Restore a soft-deleted message
+     */
+    async restore(id: string): Promise<Message> {
+        try {
+            const docRef = this.db.collection(MESSAGES_COLLECTION).doc(id);
+
+            await docRef.update({
+                deletedAt: FieldValue.delete(),
+                deletedBy: FieldValue.delete(),
+                updatedAt: Timestamp.now(),
+            });
+
+            const updatedDoc = await docRef.get();
+            if (!updatedDoc.exists) {
+                throw new Error('Message not found after restore');
+            }
+
+            return this.docToMessage(updatedDoc as QueryDocumentSnapshot);
+        } catch (error) {
+            console.error('Error restoring message:', error);
+            throw new Error('Failed to restore message');
+        }
+    }
+
+    /**
+     * Find all deleted messages
+     */
+    async findDeleted(limit?: number, offset?: number): Promise<Message[]> {
+        try {
+            let query = this.db.collection(MESSAGES_COLLECTION)
+                .where('deletedAt', '!=', null)
+                .orderBy('deletedAt', 'desc');
+
+            if (limit) query = query.limit(limit);
+            if (offset) query = query.offset(offset);
+
+            const querySnapshot = await query.get();
+            return querySnapshot.docs.map((doc) => this.docToMessage(doc));
+        } catch (error: any) {
+            console.error('Error finding deleted messages:', error);
+            throw new Error(error.message || 'Failed to fetch deleted messages');
         }
     }
 }

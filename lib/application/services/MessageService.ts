@@ -135,9 +135,9 @@ export class MessageService implements IMessageService {
     }
 
     /**
-     * Delete a message (admin only)
+     * Soft delete a message (admin only)
      */
-    async deleteMessage(id: string): Promise<void> {
+    async deleteMessage(id: string, deletedBy: string): Promise<void> {
         if (!id || id.trim().length === 0) {
             throw new ValidationError('Mesaj ID gereklidir', 'id');
         }
@@ -148,7 +148,35 @@ export class MessageService implements IMessageService {
             throw new NotFoundError('Mesaj bulunamadı');
         }
 
-        await this.messageRepository.delete(id);
+        await this.messageRepository.softDelete(id, deletedBy);
+    }
+
+    /**
+     * Restore a deleted message (admin only)
+     */
+    async restoreMessage(id: string): Promise<Message> {
+        if (!id || id.trim().length === 0) {
+            throw new ValidationError('Mesaj ID gereklidir', 'id');
+        }
+
+        // Check if message exists
+        const existingMessage = await this.messageRepository.findById(id);
+        if (!existingMessage) {
+            throw new NotFoundError('Mesaj bulunamadı');
+        }
+
+        if (!existingMessage.deletedAt) {
+            throw new ValidationError('Bu mesaj silinmemiş', 'id');
+        }
+
+        return await this.messageRepository.restore(id);
+    }
+
+    /**
+     * Get deleted messages (admin only)
+     */
+    async getDeletedMessages(limit?: number, offset?: number): Promise<Message[]> {
+        return await this.messageRepository.findDeleted(limit, offset);
     }
 
     /**

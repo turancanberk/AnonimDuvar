@@ -39,9 +39,19 @@ export interface IMessageService {
     updateMessageStatus(id: string, data: UpdateMessageStatusDTO): Promise<Message>;
 
     /**
-     * Delete a message (admin only)
+     * Soft delete a message (admin only)
      */
-    deleteMessage(id: string): Promise<void>;
+    deleteMessage(id: string, deletedBy: string): Promise<void>;
+
+    /**
+     * Restore a deleted message (admin only)
+     */
+    restoreMessage(id: string): Promise<Message>;
+
+    /**
+     * Get deleted messages (admin only)
+     */
+    getDeletedMessages(limit?: number, offset?: number): Promise<Message[]>;
 
     /**
      * Get message statistics

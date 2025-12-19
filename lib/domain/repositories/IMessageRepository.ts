@@ -82,4 +82,19 @@ export interface IMessageRepository {
      * Helper for finding pending messages
      */
     findPending?(limit?: number): Promise<Message[]>;
+
+    /**
+     * Soft delete a message (mark as deleted without removing from database)
+     */
+    softDelete(id: string, deletedBy: string): Promise<Message>;
+
+    /**
+     * Restore a soft-deleted message
+     */
+    restore(id: string): Promise<Message>;
+
+    /**
+     * Find all deleted messages
+     */
+    findDeleted(limit?: number, offset?: number): Promise<Message[]>;
 }

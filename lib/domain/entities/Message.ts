@@ -32,4 +32,7 @@ export interface Message {
     likedBy?: string[]; // Array of IP addresses
     dislikedBy?: string[]; // Array of IP addresses
     reports?: MessageReport[]; // Array of reports
+    // Soft delete
+    deletedAt?: Date | string;
+    deletedBy?: string; // Admin email who deleted it
 }

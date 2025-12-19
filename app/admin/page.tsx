@@ -22,9 +22,10 @@ export default function AdminPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [reportedMessages, setReportedMessages] = useState<Message[]>([]);
     const [violationReports, setViolationReports] = useState<ViolationReport[]>([]);
+    const [deletedMessages, setDeletedMessages] = useState<Message[]>([]);
     const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
     const [isLoading, setIsLoading] = useState(true);
-    const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'REPORTS' | 'VIOLATION_REPORTS'>('PENDING');
+    const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'REPORTS' | 'VIOLATION_REPORTS' | 'DELETED'>('PENDING');
     const [toast, setToast] = useState<{
         message: string;
         type: 'success' | 'error' | 'warning' | 'info';
@@ -74,6 +75,14 @@ export default function AdminPage() {
 
                 if (violationData.success) {
                     setViolationReports(violationData.data);
+                }
+            } else if (filter === 'DELETED') {
+                // Fetch deleted messages
+                const deletedRes = await fetch('/api/admin/deleted-messages');
+                const deletedData = await deletedRes.json();
+
+                if (deletedData.success) {
+                    setDeletedMessages(deletedData.data);
                 }
             } else {
                 // Fetch messages
@@ -271,6 +280,31 @@ export default function AdminPage() {
         }
     };
 
+    const handleRestore = async (id: string) => {
+        const previousDeletedMessages = [...deletedMessages];
+
+        // Optimistically update
+        setDeletedMessages((prev) => prev.filter(m => m.id !== id));
+
+        try {
+            const res = await fetch(`/api/admin/messages/${id}/restore`, {
+                method: 'POST',
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                showToast('Mesaj geri yüklendi', 'success');
+                fetchData(false); // Refresh stats
+            } else {
+                throw new Error(data.error?.message || 'Geri yükleme başarısız');
+            }
+        } catch (error) {
+            setDeletedMessages(previousDeletedMessages);
+            showToast(error instanceof Error ? error.message : 'Bir hata oluştu', 'error');
+        }
+    };
+
     const handleUpdateViolationReport = async (id: string, status: string) => {
         try {
             const res = await fetch(`/api/admin/violation-reports/${id}`, {
@@ -413,8 +447,8 @@ export default function AdminPage() {
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="bg-[#1b1f27]/80 backdrop-blur-sm border border-[#3b4354] rounded-lg shadow-sm p-2 mb-6 flex gap-2">
-                    {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'REPORTS', 'VIOLATION_REPORTS'] as const).map((status) => (
+                <div className="bg-[#1b1f27]/80 backdrop-blur-sm border border-[#3b4354] rounded-lg shadow-sm p-2 mb-6 flex gap-2 flex-wrap">
+                    {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'DELETED', 'REPORTS', 'VIOLATION_REPORTS'] as const).map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilter(status)}
@@ -427,6 +461,7 @@ export default function AdminPage() {
                             {status === 'PENDING' && '⏳ Bekleyen'}
                             {status === 'APPROVED' && '✅ Onaylanan'}
                             {status === 'REJECTED' && '❌ Reddedilen'}
+                            {status === 'DELETED' && '🗑️ Silinenler'}
                             {status === 'REPORTS' && '🚩 Şikayetler'}
                             {status === 'VIOLATION_REPORTS' && '📝 İhlal Bildirimleri'}
                         </button>
@@ -527,8 +562,8 @@ export default function AdminPage() {
                                                     {VIOLATION_REPORT_TYPE_LABELS[report.type]}
                                                 </span>
                                                 <span className={`px-3 py-1 text-sm font-medium rounded-full ${report.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                        report.status === 'REVIEWED' ? 'bg-blue-500/20 text-blue-400' :
-                                                            'bg-green-500/20 text-green-400'
+                                                    report.status === 'REVIEWED' ? 'bg-blue-500/20 text-blue-400' :
+                                                        'bg-green-500/20 text-green-400'
                                                     }`}>
                                                     {report.status === 'PENDING' ? 'Bekliyor' :
                                                         report.status === 'REVIEWED' ? 'İncelendi' : 'Çözüldü'}
@@ -561,6 +596,58 @@ export default function AdminPage() {
                                                 className="px-3 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
                                             >
                                                 Sil
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                ) : filter === 'DELETED' ? (
+                    /* Deleted Messages View */
+                    <div className="space-y-4">
+                        {deletedMessages.length === 0 ? (
+                            <div className="bg-[#1b1f27]/80 rounded-lg p-8 text-center border border-[#282e39]">
+                                <p className="text-gray-400">Silinmiş mesaj bulunmuyor</p>
+                            </div>
+                        ) : (
+                            deletedMessages.map((message) => (
+                                <div key={message.id} className="bg-[#1b1f27]/80 border border-[#282e39] rounded-lg p-6">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${message.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                                        message.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                                                            'bg-red-100 text-red-800'
+                                                    }`}>
+                                                    {message.status === 'PENDING' && '⏳ Beklemede'}
+                                                    {message.status === 'APPROVED' && '✅ Onaylandı'}
+                                                    {message.status === 'REJECTED' && '❌ Reddedildi'}
+                                                </span>
+                                                <div
+                                                    className="w-6 h-6 rounded border-2"
+                                                    style={{ backgroundColor: message.color }}
+                                                    title="Not rengi"
+                                                />
+                                            </div>
+                                            <p className="text-gray-300 mb-3 whitespace-pre-wrap">{message.content}</p>
+                                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                <span>Yazar: {message.authorName || 'Anonim'}</span>
+                                                <span>Oluşturulma: {new Date(message.createdAt).toLocaleString('tr-TR')}</span>
+                                                {message.deletedAt && (
+                                                    <span className="text-red-400">Silinme: {new Date(message.deletedAt).toLocaleString('tr-TR')}</span>
+                                                )}
+                                                {message.deletedBy && (
+                                                    <span>Silen: {message.deletedBy}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleRestore(message.id)}
+                                                className="px-3 py-1.5 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+                                            >
+                                                ♻️ Geri Yükle
                                             </button>
                                         </div>
                                     </div>

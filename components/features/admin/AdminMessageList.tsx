@@ -26,6 +26,7 @@ export const AdminMessageList: React.FC<AdminMessageListProps> = ({
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [rejectingId, setRejectingId] = useState<string | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const handleApprove = async (id: string) => {
         setLoadingId(id);
@@ -47,15 +48,22 @@ export const AdminMessageList: React.FC<AdminMessageListProps> = ({
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Bu mesajı silmek istediğinizden emin misiniz?')) return;
+    const handleDeleteClick = (id: string) => {
+        setDeletingId(id);
+    };
 
+    const handleDeleteConfirm = async (id: string) => {
         setLoadingId(id);
         try {
             await onDelete(id);
+            setDeletingId(null);
         } finally {
             setLoadingId(null);
         }
+    };
+
+    const handleDeleteCancel = () => {
+        setDeletingId(null);
     };
 
     if (messages.length === 0) {
@@ -80,10 +88,10 @@ export const AdminMessageList: React.FC<AdminMessageListProps> = ({
                                 {/* Status Badge */}
                                 <span
                                     className={`px-3 py-1 rounded-full text-xs font-medium ${message.status === 'PENDING'
-                                            ? 'bg-yellow-100 text-yellow-800'
-                                            : message.status === 'APPROVED'
-                                                ? 'bg-green-100 text-green-800'
-                                                : 'bg-red-100 text-red-800'
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : message.status === 'APPROVED'
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-red-100 text-red-800'
                                         }`}
                                 >
                                     {message.status === 'PENDING' && '⏳ Beklemede'}
@@ -152,7 +160,7 @@ export const AdminMessageList: React.FC<AdminMessageListProps> = ({
                         )}
 
                         <Button
-                            onClick={() => handleDelete(message.id)}
+                            onClick={() => handleDeleteClick(message.id)}
                             variant="ghost"
                             size="sm"
                             disabled={loadingId !== null}
@@ -160,6 +168,36 @@ export const AdminMessageList: React.FC<AdminMessageListProps> = ({
                             🗑️ Sil
                         </Button>
                     </div>
+
+                    {/* Delete Confirmation Modal */}
+                    {deletingId === message.id && (
+                        <div className="mt-4 p-4 bg-red-50 border-2 border-red-300 rounded-lg shadow-lg">
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="text-2xl">⚠️</span>
+                                <h4 className="text-lg font-bold text-red-800">Mesajı Sil</h4>
+                            </div>
+                            <p className="text-sm text-red-700 mb-4">
+                                Bu mesajı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                            </p>
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={() => handleDeleteConfirm(message.id)}
+                                    variant="danger"
+                                    size="sm"
+                                    isLoading={loadingId === message.id}
+                                >
+                                    🗑️ Evet, Sil
+                                </Button>
+                                <Button
+                                    onClick={handleDeleteCancel}
+                                    variant="ghost"
+                                    size="sm"
+                                >
+                                    İptal
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Rejection Modal */}
                     {rejectingId === message.id && (
