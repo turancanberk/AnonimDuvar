@@ -148,16 +148,40 @@ export class MessageService implements IMessageService {
     }
 
     /**
-     * Delete a message (admin only)
+     * Soft delete a message (admin only)
      */
-    async deleteMessage(id: string): Promise<void> {
+    async deleteMessage(id: string, deletedBy: string): Promise<void> {
         // Check if message exists
         const exists = await this.messageRepository.exists(id);
         if (!exists) {
             throw new Error('Message not found');
         }
 
-        return this.messageRepository.delete(id);
+        await this.messageRepository.softDelete(id, deletedBy);
+    }
+
+    /**
+     * Restore a deleted message (admin only)
+     */
+    async restoreMessage(id: string): Promise<Message> {
+        // Check if message exists
+        const message = await this.messageRepository.findById(id);
+        if (!message) {
+            throw new Error('Message not found');
+        }
+
+        if (!message.deletedAt) {
+            throw new Error('Message is not deleted');
+        }
+
+        return this.messageRepository.restore(id);
+    }
+
+    /**
+     * Get deleted messages (admin only)
+     */
+    async getDeletedMessages(limit?: number, offset?: number): Promise<Message[]> {
+        return this.messageRepository.findDeleted(limit, offset);
     }
 
     /**
