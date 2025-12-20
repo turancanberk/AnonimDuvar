@@ -27,6 +27,92 @@
                     "order": "DESCENDING"
                 }
             ]
+        },
+        {
+            "collectionGroup": "comments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "messageId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "comments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "deletedAt",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "comments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "messageId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "deletedAt",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "comments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "reports",
+                    "order": "DESCENDING"
+                },
+                {
+                    "fieldPath": "deletedAt",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "comments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "metadata.ipAddress",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
         }
     ],
     "fieldOverrides": []

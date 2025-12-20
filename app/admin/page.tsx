@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Message, MessageStatus } from '@/lib/domain/entities/Message';
 import { ViolationReport, VIOLATION_REPORT_TYPE_LABELS } from '@/lib/domain/entities/ViolationReport';
 import { AdminMessageList } from '@/components/features/admin/AdminMessageList';
+import { AdminCommentsSection } from '@/components/features/admin/AdminCommentsSection';
 import Link from 'next/link';
 import { Toast } from '@/components/ui/Toast';
 
@@ -25,7 +26,7 @@ export default function AdminPage() {
     const [deletedMessages, setDeletedMessages] = useState<Message[]>([]);
     const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
     const [isLoading, setIsLoading] = useState(true);
-    const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'REPORTS' | 'VIOLATION_REPORTS' | 'DELETED'>('PENDING');
+    const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'REPORTS' | 'VIOLATION_REPORTS' | 'DELETED' | 'COMMENTS'>('PENDING');
     const [toast, setToast] = useState<{
         message: string;
         type: 'success' | 'error' | 'warning' | 'info';
@@ -447,7 +448,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="bg-[#1b1f27]/80 backdrop-blur-sm border border-[#3b4354] rounded-lg shadow-sm p-2 mb-6 flex gap-2 flex-wrap">
+                <div className="bg-[#1b1f27]/80 backdrop-blur-sm border border-[#3b4354] rounded-lg shadow-sm p-2 mb-6 flex gap-2 flex-wrap items-center">
                     {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'DELETED', 'REPORTS', 'VIOLATION_REPORTS'] as const).map((status) => (
                         <button
                             key={status}
@@ -466,6 +467,20 @@ export default function AdminPage() {
                             {status === 'VIOLATION_REPORTS' && '📝 İhlal Bildirimleri'}
                         </button>
                     ))}
+
+                    {/* Divider */}
+                    <div className="h-8 w-px bg-[#3b4354] mx-2" />
+
+                    {/* Comments Button */}
+                    <button
+                        onClick={() => setFilter('COMMENTS')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors border ${filter === 'COMMENTS'
+                            ? 'bg-purple-500 text-white border-purple-500'
+                            : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 hover:text-purple-300 border-purple-500/30'
+                            }`}
+                    >
+                        💬 Yorumlar
+                    </button>
                 </div>
 
                 {/* Messages List */}
@@ -617,8 +632,8 @@ export default function AdminPage() {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-3">
                                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${message.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                                                        message.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                                                            'bg-red-100 text-red-800'
+                                                    message.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                                                        'bg-red-100 text-red-800'
                                                     }`}>
                                                     {message.status === 'PENDING' && '⏳ Beklemede'}
                                                     {message.status === 'APPROVED' && '✅ Onaylandı'}
@@ -655,6 +670,9 @@ export default function AdminPage() {
                             ))
                         )}
                     </div>
+                ) : filter === 'COMMENTS' ? (
+                    /* Comments View */
+                    <AdminCommentsSection showToast={showToast} />
                 ) : (
                     <AdminMessageList
                         messages={messages}

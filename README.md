@@ -11,11 +11,15 @@
 - ✅ **Tamamen Anonim**: Kayıt/giriş yok
 - ✅ **Opsiyonel İsim**: İstersen ismini ekle, istersen anonim kal
 - ✅ **Renkli Sticky Note'lar**: Pastel renk paleti ile duygunu ifade et
+- ✅ **Yorum Sistemi**: Mesajlara anonim yorum yapabilme
 - ✅ **Moderasyon Sistemi**: Admin onayı ile güvenli içerik
-- ✅ **Modern Tasarım**: Duygusal ama minimal arayüz
+- ✅ **Admin Paneli**: Mesaj ve yorum yönetimi, istatistikler
+- ✅ **İhlal Bildirimi**: Kullanıcılar uygunsuz içerikleri bildirebilir
+- ✅ **Soft Delete**: Silinen içerikler geri yüklenebilir
+- ✅ **Modern Tasarım**: Glassmorphism ve dark mode
 - ✅ **Responsive**: Mobil, tablet ve desktop uyumlu
 - ✅ **Rate Limiting**: Spam koruması
-- ✅ **CSRF Protection**: Güvenlik önlemleri
+- ✅ **Çoklu Admin**: Birden fazla admin desteği
 
 ## 🛠️ Teknoloji Stack
 

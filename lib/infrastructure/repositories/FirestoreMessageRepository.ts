@@ -78,17 +78,26 @@ export class FirestoreMessageRepository implements IMessageRepository {
     }
 
     /**
-     * Find all messages
+     * Find all messages (excluding deleted ones)
      */
     async findAll(limit?: number, offset?: number): Promise<Message[]> {
         try {
+            // Fetch more to account for client-side filtering of deleted messages
+            const fetchLimit = limit ? limit * 2 : 100;
             let query = this.db.collection(MESSAGES_COLLECTION).orderBy('createdAt', 'desc');
 
-            if (limit) query = query.limit(limit);
+            query = query.limit(fetchLimit);
             if (offset) query = query.offset(offset);
 
             const querySnapshot = await query.get();
-            return querySnapshot.docs.map((doc) => this.docToMessage(doc));
+
+            // Filter out deleted messages client-side (Firestore doesn't support != null easily)
+            const messages = querySnapshot.docs
+                .map((doc) => this.docToMessage(doc))
+                .filter((msg) => !msg.deletedAt);
+
+            // Return only the requested limit
+            return limit ? messages.slice(0, limit) : messages;
         } catch (error: any) {
             console.error('Error finding all messages:', error);
             throw new Error(error.message || 'Failed to fetch messages');
@@ -231,19 +240,28 @@ export class FirestoreMessageRepository implements IMessageRepository {
     }
 
     /**
-     * Find messages by status
+     * Find messages by status (excluding deleted ones)
      */
     async findByStatus(status: MessageStatus, limit?: number, offset?: number): Promise<Message[]> {
         try {
+            // Fetch more to account for client-side filtering of deleted messages
+            const fetchLimit = limit ? limit * 2 : 100;
             let query = this.db.collection(MESSAGES_COLLECTION)
                 .where('status', '==', status)
                 .orderBy('createdAt', 'desc');
 
-            if (limit) query = query.limit(limit);
+            query = query.limit(fetchLimit);
             if (offset) query = query.offset(offset);
 
             const querySnapshot = await query.get();
-            return querySnapshot.docs.map((doc) => this.docToMessage(doc));
+
+            // Filter out deleted messages client-side
+            const messages = querySnapshot.docs
+                .map((doc) => this.docToMessage(doc))
+                .filter((msg) => !msg.deletedAt);
+
+            // Return only the requested limit
+            return limit ? messages.slice(0, limit) : messages;
         } catch (error: any) {
             console.error('Error finding messages by status:', error);
             throw new Error(error.message || 'Failed to fetch messages');
@@ -269,13 +287,20 @@ export class FirestoreMessageRepository implements IMessageRepository {
         });
     }
 
+    /**
+     * Count messages by status (excluding deleted ones)
+     */
     async countByStatus(status: MessageStatus): Promise<number> {
         try {
+            // Firestore doesn't easily support count() with != null filter
+            // So we fetch minimal data and filter client-side
             const snapshot = await this.db.collection(MESSAGES_COLLECTION)
                 .where('status', '==', status)
-                .count()
+                .select('deletedAt')  // Only fetch deletedAt field for efficiency
                 .get();
-            return snapshot.data().count;
+
+            // Count only non-deleted messages
+            return snapshot.docs.filter(doc => !doc.data().deletedAt).length;
         } catch (error) {
             console.error('Error counting messages by status:', error);
             return 0;
@@ -283,12 +308,17 @@ export class FirestoreMessageRepository implements IMessageRepository {
     }
 
     /**
-     * Count total messages
+     * Count total messages (excluding deleted ones)
      */
     async countTotal(): Promise<number> {
         try {
-            const snapshot = await this.db.collection(MESSAGES_COLLECTION).count().get();
-            return snapshot.data().count;
+            // Fetch all and filter out deleted ones client-side
+            const snapshot = await this.db.collection(MESSAGES_COLLECTION)
+                .select('deletedAt')  // Only fetch deletedAt field for efficiency
+                .get();
+
+            // Count only non-deleted messages
+            return snapshot.docs.filter(doc => !doc.data().deletedAt).length;
         } catch (error) {
             console.error('Error counting total messages:', error);
             return 0;

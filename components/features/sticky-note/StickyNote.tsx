@@ -9,6 +9,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Message } from '@/lib/domain/entities/Message';
+import { CommentForm } from '@/components/features/comment/CommentForm';
+import { CommentList } from '@/components/features/comment/CommentList';
+import { Toast } from '@/components/ui/Toast';
 
 export interface StickyNoteProps {
     message: Message;
@@ -89,6 +92,19 @@ export const StickyNote: React.FC<StickyNoteProps> = ({ message, index = 0 }) =>
     const [reportReason, setReportReason] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Comment section state
+    const [isCommentsExpanded, setIsCommentsExpanded] = useState(false);
+    const [commentCount, setCommentCount] = useState(0);
+    const [toast, setToast] = useState<{
+        message: string;
+        type: 'success' | 'error' | 'warning' | 'info';
+        isVisible: boolean;
+    }>({
+        message: '',
+        type: 'info',
+        isVisible: false,
+    });
+
     // Update counts when message changes (e.g., after page refresh)
     useEffect(() => {
         setLikeCount(message.likedBy?.length || 0);
@@ -103,6 +119,23 @@ export const StickyNote: React.FC<StickyNoteProps> = ({ message, index = 0 }) =>
         setUserLiked(likedMessages.includes(message.id));
         setUserDisliked(dislikedMessages.includes(message.id));
     }, [message.id]);
+
+    // Fetch approved comment count
+    useEffect(() => {
+        const fetchCommentCount = async () => {
+            try {
+                const response = await fetch(`/api/comments?messageId=${message.id}&status=APPROVED&limit=1`);
+                const data = await response.json();
+                if (data.success) {
+                    setCommentCount(data.pagination.total || 0);
+                }
+            } catch (error) {
+                console.error('Error fetching comment count:', error);
+            }
+        };
+
+        fetchCommentCount();
+    }, [message.id, isCommentsExpanded]);
 
     // Get theme based on message color or index
     const theme = useMemo(() => {
@@ -330,6 +363,81 @@ export const StickyNote: React.FC<StickyNoteProps> = ({ message, index = 0 }) =>
                         <span className="text-xs font-medium">Şikayet</span>
                     </button>
                 </div>
+
+                {/* Comment Section - Inline */}
+                <div className="mt-3 pt-3 border-t border-white/5">
+                    <button
+                        onClick={() => setIsCommentsExpanded(!isCommentsExpanded)}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all group"
+                    >
+                        <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            <span className="text-sm text-gray-300 font-medium">
+                                Yorum Yap {commentCount > 0 && `(${commentCount})`}
+                            </span>
+                        </div>
+                        <svg className={`w-4 h-4 text-gray-400 group-hover:text-primary transition-all ${isCommentsExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    {isCommentsExpanded && (
+                        <div className="mt-3 space-y-3">
+                            <CommentForm
+                                messageId={message.id}
+                                onSubmit={async (data) => {
+                                    setIsSubmitting(true);
+                                    try {
+                                        const response = await fetch('/api/comments', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                messageId: message.id,
+                                                content: data.content,
+                                                authorName: data.authorName
+                                            }),
+                                        });
+                                        const result = await response.json();
+
+                                        if (result.success) {
+                                            // Show success notification
+                                            setToast({
+                                                message: 'Yorumunuz gönderildi! Admin onayından sonra yayınlanacaktır. 🎉',
+                                                type: 'success',
+                                                isVisible: true,
+                                            });
+                                            // Don't increment count - only approved comments are counted
+                                        } else {
+                                            setToast({
+                                                message: result.error?.message || 'Yorum gönderilemedi',
+                                                type: 'error',
+                                                isVisible: true,
+                                            });
+                                        }
+                                    } catch (error) {
+                                        console.error('Error:', error);
+                                        setToast({
+                                            message: 'Yorum gönderilirken bir hata oluştu',
+                                            type: 'error',
+                                            isVisible: true,
+                                        });
+                                    } finally {
+                                        setIsSubmitting(false);
+                                    }
+                                }}
+                                isSubmitting={isSubmitting}
+                            />
+                            <CommentList
+                                messageId={message.id}
+                                onLike={async (id) => { await fetch(`/api/comments/${id}/interactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'like' }) }); }}
+                                onDislike={async (id) => { await fetch(`/api/comments/${id}/interactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'dislike' }) }); }}
+                                onReport={async (id, reason) => { await fetch(`/api/comments/${id}/interactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', reason }) }); }}
+                            />
+                        </div>
+                    )}
+                </div>
             </motion.div>
 
             {/* Report Modal */}
@@ -380,6 +488,14 @@ export const StickyNote: React.FC<StickyNoteProps> = ({ message, index = 0 }) =>
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Toast Notification */}
+            <Toast
+                message={toast.message}
+                type={toast.type}
+                isVisible={toast.isVisible}
+                onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+            />
         </>
     );
 };

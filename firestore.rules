@@ -89,6 +89,45 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
+    // Comments collection
+    match /comments/{commentId} {
+      
+      // Helper function: Validate comment content
+      function isValidCommentContent(data) {
+        return data.content is string &&
+               data.content.size() > 0 &&
+               data.content.size() <= 500;
+      }
+      
+      // Helper function: Validate comment author name (optional)
+      function isValidCommentAuthorName(data) {
+        return !('authorName' in data) || 
+               (data.authorName is string && data.authorName.size() <= 50);
+      }
+      
+      // READ RULES
+      // Anyone can read APPROVED comments that are not deleted
+      allow read: if resource.data.status == 'APPROVED' && 
+                     !('deletedAt' in resource.data);
+      
+      // Admins can read ALL comments
+      allow read: if isAdmin();
+      
+      // CREATE RULES
+      // Comments can only be created via API (server-side with Admin SDK)
+      // This prevents direct client writes and ensures proper validation
+      allow create: if false;
+      
+      // UPDATE RULES
+      // Only admins can update comments (for moderation)
+      // Updates are done via API with Admin SDK
+      allow update: if false;
+      
+      // DELETE RULES
+      // Only admins can delete comments via API
+      allow delete: if false;
+    }
+    
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;
