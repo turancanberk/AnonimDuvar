@@ -784,7 +784,7 @@ export class FirestoreCommentRepository implements ICommentRepository {
                 .get();
 
             // Filter for reported comments client-side
-            let allReported = querySnapshot.docs
+            const allReported = querySnapshot.docs
                 .map(doc => this.docToComment(doc))
                 .filter(comment => !comment.deletedAt && comment.reports && comment.reports.length > 0);
 

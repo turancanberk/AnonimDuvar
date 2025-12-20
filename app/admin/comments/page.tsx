@@ -450,7 +450,7 @@ export default function AdminCommentsPage() {
                                                     <span>Bağlı Mesaj:</span>
                                                 </div>
                                                 <p className="text-sm text-gray-300 italic line-clamp-2">
-                                                    "{(comment as any).messagePreview || 'Yükleniyor...'}"
+                                                    &quot;{(comment as any).messagePreview || 'Yükleniyor...'}&quot;
                                                 </p>
                                                 <a
                                                     href={`/?highlight=${comment.messageId}`}
