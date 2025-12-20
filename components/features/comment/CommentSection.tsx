@@ -189,7 +189,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                     <div className="flex items-center gap-2">
                         <span className="text-2xl">💬</span>
                         <span className="text-white font-medium">
-                            Yorumlar {commentCount > 0 && `(${commentCount})`}
+                            Yorum Yap {commentCount > 0 && `(${commentCount})`}
                         </span>
                     </div>
                     <svg
@@ -203,23 +203,23 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                     </svg>
                 </button>
 
-                {/* Expanded Content */}
+                {/* Expanded Content - Önce yorumlar, sonra form */}
                 {isExpanded && (
                     <div className="mt-3 space-y-4 animate-in slide-in-from-top duration-300">
-                        {/* Comment Form */}
-                        <CommentForm
-                            messageId={messageId}
-                            onSubmit={handleSubmitComment}
-                            isSubmitting={isSubmitting}
-                        />
-
-                        {/* Comment List */}
+                        {/* Comment List - Yorumlar üstte */}
                         <CommentList
                             key={refreshKey}
                             messageId={messageId}
                             onLike={handleLike}
                             onDislike={handleDislike}
                             onReport={handleReport}
+                        />
+
+                        {/* Comment Form - Form altta */}
+                        <CommentForm
+                            messageId={messageId}
+                            onSubmit={handleSubmitComment}
+                            isSubmitting={isSubmitting}
                         />
                     </div>
                 )}

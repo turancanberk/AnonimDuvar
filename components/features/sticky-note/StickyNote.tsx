@@ -385,6 +385,15 @@ export const StickyNote: React.FC<StickyNoteProps> = ({ message, index = 0 }) =>
 
                     {isCommentsExpanded && (
                         <div className="mt-3 space-y-3">
+                            {/* Yorumlar listesi önce */}
+                            <CommentList
+                                messageId={message.id}
+                                onLike={async (id) => { await fetch(`/api/comments/${id}/interactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'like' }) }); }}
+                                onDislike={async (id) => { await fetch(`/api/comments/${id}/interactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'dislike' }) }); }}
+                                onReport={async (id, reason) => { await fetch(`/api/comments/${id}/interactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', reason }) }); }}
+                            />
+
+                            {/* Yorum formu altta */}
                             <CommentForm
                                 messageId={message.id}
                                 onSubmit={async (data) => {
@@ -428,12 +437,6 @@ export const StickyNote: React.FC<StickyNoteProps> = ({ message, index = 0 }) =>
                                     }
                                 }}
                                 isSubmitting={isSubmitting}
-                            />
-                            <CommentList
-                                messageId={message.id}
-                                onLike={async (id) => { await fetch(`/api/comments/${id}/interactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'like' }) }); }}
-                                onDislike={async (id) => { await fetch(`/api/comments/${id}/interactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'dislike' }) }); }}
-                                onReport={async (id, reason) => { await fetch(`/api/comments/${id}/interactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', reason }) }); }}
                             />
                         </div>
                     )}
